@@ -1,0 +1,65 @@
+﻿<Window
+    x:Class="EjectDisk.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="clr-namespace:EjectDisk"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Title="取消磁盘占用"
+    Width="800"
+    Height="450"
+    Loaded="Window_Loaded"
+    mc:Ignorable="d">
+    <Grid Margin="4">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="8" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <ListView x:Name="lbx">
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Vertical">
+                        <TextBlock FontWeight="Bold">
+                            <Run Text="磁盘" />
+                            <Run Text="{Binding ID}" />
+                            <Run Text="{Binding Size}" />
+                        </TextBlock>
+                        <ItemsControl
+                            Margin="12,4,0,0"
+                            ItemsSource="{Binding Partitions}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Margin="6,0">
+                                            <Run Text="分区" />
+                                            <Run Text="{Binding ID}" />
+                                            <Run Text="{Binding Size}" />
+                                        </TextBlock>
+                                        <TextBlock Margin="6,0">
+                                            <Run Text="{Binding Others}" />
+                                        </TextBlock>
+                                     
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+        <StackPanel
+            Grid.Row="2"
+            HorizontalAlignment="Right"
+            Orientation="Horizontal">
+            <Button
+                x:Name="btn"
+                Padding="12,4"
+                Click="btn_Click">
+                强制停止占用
+            </Button>
+            <!--<Button x:Name="btn2" Click="btn_Click_1">删除</Button>-->
+        </StackPanel>
+    </Grid>
+</Window>
