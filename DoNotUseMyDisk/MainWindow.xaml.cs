@@ -34,29 +34,62 @@ namespace EjectDisk
                 return;
             }
             DispartProcess p = new DispartProcess();
-            (sender as Button).IsEnabled = false;
+            IsEnabled = false;
             try
             {
                 await p.OfflineAndOnlineAsync(disk.ID);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                MessageBox.Show(ex.Message,"错误");
+                MessageBox.Show(ex.Message, "错误");
             }
             finally
             {
-
-                lbx.ItemsSource = await p.GetDisksAsync();
-                (sender as Button).IsEnabled = true;
+                await LoadDisksAsync();
+                IsEnabled = true;
             }
         }
 
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
+            await LoadDisksAsync();
+        }
+
+        private async Task LoadDisksAsync()
+        {
+            var enable = IsEnabled;
             IsEnabled = false;
             DispartProcess p = new DispartProcess();
             lbx.ItemsSource = await p.GetDisksAsync();
-            IsEnabled = true;
+            IsEnabled = enable;
         }
+        private async void btnReload_Click(object sender, RoutedEventArgs e)
+        {
+            await LoadDisksAsync();
+        }
+        private async void btnDismount_Click(object sender, RoutedEventArgs e)
+        {
+            DiskInfo disk = lbx.SelectedItem as DiskInfo;
+            if (disk == null)
+            {
+                return;
+            }
+            DispartProcess p = new DispartProcess();
+            IsEnabled = false;
+            try
+            {
+                await p.DismountAsync(disk);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "错误");
+            }
+            finally
+            {
+                await LoadDisksAsync();
+                IsEnabled = true;
+            }
+        }
+
     }
 }

@@ -62,41 +62,92 @@ namespace EjectDisk
         }
     }
 
+    public class RemoveDriveProcess : BetterProcessBase
+    {
+        public RemoveDriveProcess(DiskInfo disk,bool loop)
+        {
+            if(disk.Volumes.Count==0)
+            {
+                throw new Exception("没有挂载点");
+            }
+
+            volumeLTR = disk.Volumes[0].LTR;
+            this.loop = loop;
+        }
+
+        string volumeLTR;
+        private readonly bool loop;
+
+        public override string GetArgs()
+        {
+            return $"{volumeLTR}: {(loop?"-L":"")}";
+        }
+
+        public override string GetFileName()
+        {
+            if(IntPtr.Size == 4)
+            {
+                return "RemoveDrive_32.exe";
+            }
+            return "RemoveDrive_64.exe";
+        }
+    }
+
     public class DispartProcess : BetterProcessBase
     {
         public async Task<IReadOnlyList<DiskInfo>> GetDisksAsync()
         {
-            List<DiskInfo> results = new List<DiskInfo>();
+            List<DiskInfo> disks = new List<DiskInfo>();
             foreach (var line in await GetOutputAsync("list disk", "exit"))
             {
                 var disk = DiskParser.GetDiskInfo(line);
                 if (disk != null)
                 {
-                    await AddPartitions(disk);
-                    results.Add(disk);
-
+                    disks.Add(disk);
                 }
             }
-            return results;
-        }
-
-        private async Task AddPartitions(DiskInfo disk)
-        {
-            var partLines = await GetOutputAsync($"select disk {disk.ID}", "list part", "exit");
-            foreach (var pLine in partLines)
+            await foreach (var volume in GetVolumes())
             {
-                var part = DiskParser.GetPartitionInfo(pLine);
-                if (part != null)
+                var diskID = await GetDiskIdOfVolume(volume);
+                if (diskID != null)
                 {
-                    var partDetailLines = await GetOutputAsync($"select disk {disk.ID}", $"select part {part.ID}", "detail part", "exit");
-                    foreach (var pdLine in partDetailLines)
+                    var disk = disks.FirstOrDefault(x => x.ID == diskID);
+                    if (disk != null)
                     {
-                        DiskParser.ApplyPartitionDetails(part, pdLine);
+                        disk.Volumes.Add(volume);
                     }
-                    disk.Partitions.Add(part);
+                }
+            }
+            return disks;
+        }
+
+        private async IAsyncEnumerable<VolumeInfo> GetVolumes()
+        {
+            var volumeLines = await GetOutputAsync("list volume", "exit");
+            foreach (var line in volumeLines)
+            {
+                var volume = DiskParser.GetVolumeInfo(line);
+                if (volume != null)
+                {
+                    yield return volume;
                 }
             }
         }
+
+        private async Task<string> GetDiskIdOfVolume(VolumeInfo volume)
+        {
+            var volumeDetailLines = await GetOutputAsync($"select volume {volume.ID}", "detail volume", "exit");
+            foreach (var line in volumeDetailLines)
+            {
+                var diskInfo = DiskParser.GetDiskInfo(line);
+                if (diskInfo != null)
+                {
+                    return diskInfo.ID;
+                }
+            }
+            return null;
+        }
+
 
         public async Task OfflineAndOnlineAsync(string id)
         {
@@ -104,6 +155,19 @@ namespace EjectDisk
             if (!output.Any(p => p.Contains("成功")))
             {
                 throw new Exception(string.Join(Environment.NewLine, output));
+            }
+        }
+
+        public async Task DismountAsync(DiskInfo disk)
+        {
+            foreach (var volume in disk.Volumes)
+            {
+                var output = await GetOutputAsync($"select volume {volume.ID}", "remove all dismount", "exit");
+                if(!output.Any(p=>p== "DiskPart 成功地删除了驱动器号或装载点。")
+                    ||!output.Any(p=>p== "DiskPart 成功地卸载了此卷并使其脱机。"))
+                {
+                    throw new Exception(string.Join(Environment.NewLine, output));
+                }
             }
         }
 
@@ -120,9 +184,11 @@ namespace EjectDisk
 
     public class DiskParser
     {
-        public static readonly Regex rDisk = new Regex(@"^ +磁盘 (?<ID>[\w]+) +.. +(?<Size>[\w\.]+ .B) +[\w\.]+ .?B +");
+        public static readonly Regex rDisk = new Regex(@"磁盘 (?<ID>[\w]+) +.. +(?<Size>[\w\.]+ .B) +[\w\.]+ .?B +");
         public static readonly Regex rPartition = new Regex(@"分区 +(?<ID>[\w]+) +.* +(?<Size>[\w\.]+ .B) +[\w\.]+ .B");
-        public static readonly Regex rPartitionDetail = new Regex(@"卷 +(?<Others>.+\w.+)");
+        public static readonly Regex rVolume = new Regex(@"卷 (?<ID>\w+) ((?<LTR>[A-Z]) )?((?<Label>.+) )?(?<FS>[A-Z\w]+) (磁盘分区|可移动) (?<Size>\w+ .?B) ");
+        public static readonly Regex rVolumeDetail = new Regex(@"卷 +(?<Others>.+\w.+)");
+
         public static DiskInfo GetDiskInfo(string line)
         {
             var result = rDisk.Match(line);
@@ -130,50 +196,51 @@ namespace EjectDisk
             {
                 return null;
             }
-            string id = result.Groups["ID"].Value;
-            string size = result.Groups["Size"].Value;
-            return new DiskInfo() { ID = id, Size = size };
+            return new DiskInfo()
+            {
+                ID = result.Groups["ID"].Value,
+                Size = result.Groups["Size"].Value
+            };
         }
 
-        public static PartitionInfo GetPartitionInfo(string line)
+        public static VolumeInfo GetVolumeInfo(string line)
         {
-            var result = rPartition.Match(line);
+            var result = rVolume.Match(ToSingleSpace(line));
             if (!result.Success)
             {
                 return null;
             }
-            string id = result.Groups["ID"].Value;
-            string size = result.Groups["Size"].Value;
-            return new PartitionInfo() { ID = id, Size = size };
+            return new VolumeInfo()
+            {
+                ID = result.Groups["ID"].Value,
+                FileSystem = result.Groups["FS"].Value,
+                LTR = result.Groups["LTR"].Value,
+                Label = result.Groups["Label"].Value,
+                Size = result.Groups["Size"].Value,
+            };
         }
 
-        public static void ApplyPartitionDetails(PartitionInfo info, string line)
+        private static readonly Regex rSpace = new Regex("[\\s]+");
+
+        private static string ToSingleSpace(string line)
         {
-            var result = rPartitionDetail.Match(line);
-            if (!result.Success || line.Contains("#"))
-            {
-                return;
-            }
-            info.Others = result.Groups["Others"].Value;
-            new Regex("[\\s]+").Replace(info.Others, " ");
+            return rSpace.Replace(line.Trim(), " ");
         }
     }
-    public class PartitionInfo
+
+    public class VolumeInfo
     {
         public string ID { get; set; }
-        public string Others { get; set; }
+        public string LTR { get; set; }
+        public string Label { get; set; }
+        public string FileSystem { get; set; }
         public string Size { get; set; }
-
     }
     public class DiskInfo
     {
         public string ID { get; set; }
         public string Size { get; set; }
-        public List<PartitionInfo> Partitions { get; } = new List<PartitionInfo>();
+        public List<VolumeInfo> Volumes { get; } = new List<VolumeInfo>();
 
-        public override string ToString()
-        {
-            return ID + "\t" + Size;
-        }
     }
 }

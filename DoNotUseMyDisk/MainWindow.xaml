@@ -16,30 +16,40 @@
             <RowDefinition Height="8" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-        <ListView x:Name="lbx">
+        <ListView
+            x:Name="lbx"
+            BorderThickness="0">
             <ListView.ItemTemplate>
                 <DataTemplate>
                     <StackPanel Orientation="Vertical">
-                        <TextBlock FontWeight="Bold">
-                            <Run Text="磁盘" />
-                            <Run Text="{Binding ID}" />
-                            <Run Text="{Binding Size}" />
-                        </TextBlock>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock
+                                Width="48"
+                                FontWeight="Bold">
+                                <Run Text="磁盘" />
+                                <Run Text="{Binding ID}" />
+                            </TextBlock>
+                            <TextBlock Text="{Binding Size}" />
+                        </StackPanel>
                         <ItemsControl
                             Margin="12,4,0,0"
-                            ItemsSource="{Binding Partitions}">
+                            ItemsSource="{Binding Volumes}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Margin="6,0">
-                                            <Run Text="分区" />
-                                            <Run Text="{Binding ID}" />
-                                            <Run Text="{Binding Size}" />
-                                        </TextBlock>
-                                        <TextBlock Margin="6,0">
-                                            <Run Text="{Binding Others}" />
-                                        </TextBlock>
-                                     
+                                        <TextBlock
+                                            Width="36"
+                                            Text="{Binding LTR}" />
+                                        <TextBlock
+                                            Width="128"
+                                            Text="{Binding Label}" />
+                                        <TextBlock
+                                            Width="128"
+                                            Text="{Binding Size}" />
+                                        <TextBlock
+                                            Width="128"
+                                            Text="{Binding FileSystem}" />
+
                                     </StackPanel>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
@@ -53,12 +63,25 @@
             Grid.Row="2"
             HorizontalAlignment="Right"
             Orientation="Horizontal">
-            <Button
-                x:Name="btn"
-                Padding="12,4"
-                Click="btn_Click">
-                强制停止占用
-            </Button>
+            <StackPanel Orientation="Horizontal">
+                <Button
+                    Margin="0,0,12,0"
+                    Padding="12,4"
+                    Click="btnReload_Click">
+                    刷新
+                </Button>
+                <Button
+                    Margin="0,0,12,0"
+                    Padding="12,4"
+                    Click="btn_Click">
+                    强制停止占用
+                </Button>
+                <Button
+                    Padding="12,4"
+                    Click="btnDismount_Click">
+                    取消挂载
+                </Button>
+            </StackPanel>
             <!--<Button x:Name="btn2" Click="btn_Click_1">删除</Button>-->
         </StackPanel>
     </Grid>
