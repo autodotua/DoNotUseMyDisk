@@ -91,5 +91,29 @@ namespace EjectDisk
             }
         }
 
+        private async void btnRemove_Click(object sender, RoutedEventArgs e)
+        {
+            DiskInfo disk = lbx.SelectedItem as DiskInfo;
+            if (disk == null)
+            {
+                return;
+            }
+            IsEnabled = false;
+            try
+            {
+                RemoveDriveProcess p = new RemoveDriveProcess(disk, true);
+                 p.StartRun();
+                await p.WaitForExitAsync();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "错误");
+            }
+            finally
+            {
+                await LoadDisksAsync();
+                IsEnabled = true;
+            }
+        }
     }
 }

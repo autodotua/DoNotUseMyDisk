@@ -64,9 +64,9 @@ namespace EjectDisk
 
     public class RemoveDriveProcess : BetterProcessBase
     {
-        public RemoveDriveProcess(DiskInfo disk,bool loop)
+        public RemoveDriveProcess(DiskInfo disk, bool loop)
         {
-            if(disk.Volumes.Count==0)
+            if (disk.Volumes.Count == 0)
             {
                 throw new Exception("没有挂载点");
             }
@@ -80,12 +80,12 @@ namespace EjectDisk
 
         public override string GetArgs()
         {
-            return $"{volumeLTR}: {(loop?"-L":"")}";
+            return $"{volumeLTR}: {(loop ? "-L" : "")}";
         }
 
         public override string GetFileName()
         {
-            if(IntPtr.Size == 4)
+            if (IntPtr.Size == 4)
             {
                 return "RemoveDrive_32.exe";
             }
@@ -103,27 +103,19 @@ namespace EjectDisk
                 var disk = DiskParser.GetDiskInfo(line);
                 if (disk != null)
                 {
-                    disks.Add(disk);
-                }
-            }
-            await foreach (var volume in GetVolumes())
-            {
-                var diskID = await GetDiskIdOfVolume(volume);
-                if (diskID != null)
-                {
-                    var disk = disks.FirstOrDefault(x => x.ID == diskID);
-                    if (disk != null)
+                    await foreach (var volume in GetVolumes(disk))
                     {
                         disk.Volumes.Add(volume);
                     }
+                    disks.Add(disk);
                 }
             }
             return disks;
         }
 
-        private async IAsyncEnumerable<VolumeInfo> GetVolumes()
+        private async IAsyncEnumerable<VolumeInfo> GetVolumes(DiskInfo disk)
         {
-            var volumeLines = await GetOutputAsync("list volume", "exit");
+            var volumeLines = await GetOutputAsync($"select disk {disk.ID}", "detail disk", "exit");
             foreach (var line in volumeLines)
             {
                 var volume = DiskParser.GetVolumeInfo(line);
@@ -134,19 +126,6 @@ namespace EjectDisk
             }
         }
 
-        private async Task<string> GetDiskIdOfVolume(VolumeInfo volume)
-        {
-            var volumeDetailLines = await GetOutputAsync($"select volume {volume.ID}", "detail volume", "exit");
-            foreach (var line in volumeDetailLines)
-            {
-                var diskInfo = DiskParser.GetDiskInfo(line);
-                if (diskInfo != null)
-                {
-                    return diskInfo.ID;
-                }
-            }
-            return null;
-        }
 
 
         public async Task OfflineAndOnlineAsync(string id)
@@ -163,8 +142,8 @@ namespace EjectDisk
             foreach (var volume in disk.Volumes)
             {
                 var output = await GetOutputAsync($"select volume {volume.ID}", "remove all dismount", "exit");
-                if(!output.Any(p=>p== "DiskPart 成功地删除了驱动器号或装载点。")
-                    ||!output.Any(p=>p== "DiskPart 成功地卸载了此卷并使其脱机。"))
+                if (!output.Any(p => p == "DiskPart 成功地删除了驱动器号或装载点。")
+                    || !output.Any(p => p == "DiskPart 成功地卸载了此卷并使其脱机。"))
                 {
                     throw new Exception(string.Join(Environment.NewLine, output));
                 }

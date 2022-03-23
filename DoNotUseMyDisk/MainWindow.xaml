@@ -5,84 +5,86 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="clr-namespace:EjectDisk"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:ui="http://schemas.modernwpf.com/2019"
     Title="取消磁盘占用"
     Width="800"
     Height="450"
+    ui:WindowHelper.UseModernWindowStyle="True"
     Loaded="Window_Loaded"
     mc:Ignorable="d">
-    <Grid Margin="4">
+    <Window.Resources>
+        <Style
+            BasedOn="{StaticResource DefaultButtonStyle}"
+            TargetType="{x:Type Button}">
+            <Setter Property="Width" Value="108" />
+            <Setter Property="Height" Value="36" />
+        </Style>
+    </Window.Resources>
+    <Grid Margin="8">
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
             <RowDefinition Height="8" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-        <ListView
-            x:Name="lbx"
-            BorderThickness="0">
+        <ListView x:Name="lbx">
             <ListView.ItemTemplate>
                 <DataTemplate>
-                    <StackPanel Orientation="Vertical">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock
-                                Width="48"
-                                FontWeight="Bold">
-                                <Run Text="磁盘" />
-                                <Run Text="{Binding ID}" />
-                            </TextBlock>
-                            <TextBlock Text="{Binding Size}" />
+                    <Border Padding="2,6">
+                        <StackPanel Orientation="Vertical">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock
+                                    Width="48"
+                                    FontWeight="Bold">
+                                    <Run Text="磁盘" />
+                                    <Run Text="{Binding ID}" />
+                                </TextBlock>
+                                <TextBlock Text="{Binding Size}" />
+                            </StackPanel>
+                            <ItemsControl
+                                Margin="12,4,0,0"
+                                ItemsSource="{Binding Volumes}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock
+                                                Width="36"
+                                                Text="{Binding LTR}" />
+                                            <TextBlock
+                                                Width="128"
+                                                Text="{Binding Label}" />
+                                            <TextBlock
+                                                Width="128"
+                                                Text="{Binding Size}" />
+                                            <TextBlock
+                                                Width="128"
+                                                Text="{Binding FileSystem}" />
+
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                         </StackPanel>
-                        <ItemsControl
-                            Margin="12,4,0,0"
-                            ItemsSource="{Binding Volumes}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock
-                                            Width="36"
-                                            Text="{Binding LTR}" />
-                                        <TextBlock
-                                            Width="128"
-                                            Text="{Binding Label}" />
-                                        <TextBlock
-                                            Width="128"
-                                            Text="{Binding Size}" />
-                                        <TextBlock
-                                            Width="128"
-                                            Text="{Binding FileSystem}" />
-
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
-
+                    </Border>
                 </DataTemplate>
             </ListView.ItemTemplate>
         </ListView>
-        <StackPanel
+        <ui:SimpleStackPanel
             Grid.Row="2"
             HorizontalAlignment="Right"
-            Orientation="Horizontal">
-            <StackPanel Orientation="Horizontal">
-                <Button
-                    Margin="0,0,12,0"
-                    Padding="12,4"
-                    Click="btnReload_Click">
-                    刷新
-                </Button>
-                <Button
-                    Margin="0,0,12,0"
-                    Padding="12,4"
-                    Click="btn_Click">
-                    强制停止占用
-                </Button>
-                <Button
-                    Padding="12,4"
-                    Click="btnDismount_Click">
-                    取消挂载
-                </Button>
-            </StackPanel>
-            <!--<Button x:Name="btn2" Click="btn_Click_1">删除</Button>-->
-        </StackPanel>
+            Orientation="Horizontal"
+            Spacing="8">
+            <Button Click="btnReload_Click">
+                刷新
+            </Button>
+            <Button Click="btn_Click">
+                强制停止占用
+            </Button>
+            <Button Click="btnDismount_Click">
+                取消挂载
+            </Button>
+            <Button Click="btnRemove_Click">
+                移除设备
+            </Button>
+        </ui:SimpleStackPanel>
     </Grid>
 </Window>
