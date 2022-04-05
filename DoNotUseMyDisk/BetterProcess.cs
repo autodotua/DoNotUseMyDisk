@@ -49,15 +49,41 @@ namespace EjectDisk
             return process.WaitForExitAsync();
         }
 
-        public async Task<string[]> GetOutputAsync(params string[] inputs)
+        public Task<string[]> GetOutputAsync(params string[] inputs)
+        {
+            return GetOutputAsync(TimeSpan.Zero, inputs);
+        }
+        public async Task<string[]> GetOutputAsync(TimeSpan timeout, params string[] inputs)
         {
             StartRun();
             foreach (var input in inputs)
             {
                 Input(input);
             }
-            await WaitForExitAsync();
+            if (timeout == TimeSpan.Zero)
+            {
+                await WaitForExitAsync();
+            }
+            else
+            {
+                await Task.WhenAny(((Func<Task>)(async () =>
+               {
+                   try
+                   {
+                       await WaitForExitAsync();
+                   }
+                   catch (Exception ex)
+                   {
+
+                   }
+               }))(), Task.Delay(timeout));
+                if (!process.HasExited)
+                {
+                    throw new TimeoutException($"进程{process.ProcessName}超时");
+                }
+            }
             var result = await process.StandardOutput.ReadToEndAsync();
+            Debug.WriteLine(result);
             return result.Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
         }
     }
@@ -66,12 +92,13 @@ namespace EjectDisk
     {
         public RemoveDriveProcess(DiskInfo disk, bool loop)
         {
-            if (disk.Volumes.Count == 0)
+            var volumes = disk.Volumes.Where(p => !string.IsNullOrEmpty(p.LTR)).ToList();
+            if (volumes.Count == 0)
             {
                 throw new Exception("没有挂载点");
             }
 
-            volumeLTR = disk.Volumes[0].LTR;
+            volumeLTR = volumes[0].LTR;
             this.loop = loop;
         }
 
@@ -91,6 +118,7 @@ namespace EjectDisk
             }
             return "RemoveDrive_64.exe";
         }
+
     }
 
     public class DispartProcess : BetterProcessBase

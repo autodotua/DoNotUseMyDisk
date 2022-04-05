@@ -103,7 +103,11 @@ namespace EjectDisk
             {
                 RemoveDriveProcess p = new RemoveDriveProcess(disk, true);
                  p.StartRun();
-                await p.WaitForExitAsync();
+                await p.GetOutputAsync(TimeSpan.FromSeconds(10));
+            }
+            catch (TimeoutException ex)
+            {
+                MessageBox.Show("移出设备超时，请先尝试“强制停止占用”。", "错误");
             }
             catch (Exception ex)
             {
